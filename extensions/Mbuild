@@ -1,0 +1,4 @@
+# -*- Makefile -*-
+
+obj-${build_zenset}      += libxt_zenset.so
+obj-${build_RESET}       += libxt_RESET.so

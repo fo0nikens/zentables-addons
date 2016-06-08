@@ -1,0 +1,14 @@
+Makefile
+Makefile.in
+Makefile.iptrules
+aclocal.m4
+build-aux/
+config.h
+config.h.in
+*.log
+*.status
+configure
+extensions/
+libtool
+stamp-h1
+

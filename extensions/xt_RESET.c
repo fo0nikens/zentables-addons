@@ -17,6 +17,7 @@
 #include <linux/ip.h>
 #include <linux/udp.h>
 #include <linux/icmp.h>
+#include <linux/version.h>
 #include <net/icmp.h>
 #include <net/ip.h>
 #include <net/tcp.h>
@@ -34,7 +35,7 @@ MODULE_AUTHOR("Lourival Vieira Neto <lourival@zenedge.com>");
 MODULE_DESCRIPTION("Zenedge: TCP reseting target for IPv4");
 
 /* Send RST reply */
-static void send_reset(struct sk_buff *oldskb, int hook)
+static void send_reset(struct sk_buff *oldskb, const struct xt_action_param *par)
 {
 	struct sk_buff *nskb;
 	const struct iphdr *oiph;
@@ -59,7 +60,7 @@ static void send_reset(struct sk_buff *oldskb, int hook)
 		return;
 
 	/* Check checksum */
-	if (nf_ip_checksum(oldskb, hook, ip_hdrlen(oldskb), IPPROTO_TCP))
+	if (nf_ip_checksum(oldskb, par->hooknum, ip_hdrlen(oldskb), IPPROTO_TCP))
 		return;
 	oiph = ip_hdr(oldskb);
 
@@ -109,7 +110,12 @@ static void send_reset(struct sk_buff *oldskb, int hook)
 	skb_dst_set_noref(nskb, skb_dst(oldskb));
 
 	nskb->protocol = htons(ETH_P_IP);
+
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(4,4,0)
+	if (ip_route_me_harder(par->net, nskb, RTN_UNSPEC))
+#else
 	if (ip_route_me_harder(nskb, RTN_UNSPEC))
+#endif
 		goto free_nskb;
 
 	niph->ttl	= ip4_dst_hoplimit(skb_dst(nskb));
@@ -138,7 +144,12 @@ static void send_reset(struct sk_buff *oldskb, int hook)
 		dev_queue_xmit(nskb);
 	} else
 #endif
+
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(4,4,0)
+		ip_local_out(par->net, nskb->sk, nskb);
+#else
 		ip_local_out(nskb);
+#endif
 
 	return;
 
@@ -153,7 +164,7 @@ reset_tg(struct sk_buff *skb, const struct xt_action_param *par)
 	struct tcphdr *tcph;
 	__be16 oldctl;
 
-	send_reset(skb, par->hooknum);
+	send_reset(skb, par);
 
 	if (!skb_make_writable(skb, skb_headlen(skb)))
 		return NF_DROP;

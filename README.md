@@ -24,7 +24,7 @@ Protocol_ using _TCP RST_ and a _IP set_, we can use:
 ```
 # ipset create blacklist hash:ip
 # ipset add blacklist 10.10.10.10
-# iptables -I INPUT -m zenset --proxy-protocol --match-set blacklist src -j RESET
+# iptables -I INPUT -p tcp -m zenset --proxy-protocol --match-set blacklist src -j RESET
 ```
 
 ## Installation
